@@ -1,0 +1,33 @@
+first of all the tree must work in local, then with the server.
+
+
+things to do:
+- manage how to write all the database fields
+- manage how to threat mutual exclusion in the server.
+- manage the data retrieve fake
+- manage the change of sectors
+- manage the deletion because i cannot have pointers to parent. (but I can put them only temporarely)
+- manage the pointer to the right leaf, because I cannot have this pointer.
+- put the set of nodes in header_cli.h
+- manage the correctness of sector retrieved
+
+print node
+print record
+serialize node
+serialize record
+deserialize node
+deserialize record
+...
+
+one function per time
+each function must work
+no link between leafs
+first of all I have to create the tree and make it as I want.
+I will see other things later.
+
+header_cli.h
+missing the set of nodes for changin them when write list.
+done for all the other things
+
+cli.cpp 
+almost done

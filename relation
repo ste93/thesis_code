@@ -1,0 +1,6 @@
+for the insertion you must retrieve all the data from the server
+for the delete you must retrieve all the data from the server
+for retrieve the data you have to make fake requests
+you choose the different positions of the nodes in the storage via random numbers
+those numbers must be saved in the nodes
+
