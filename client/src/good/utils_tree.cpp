@@ -69,6 +69,7 @@ void serialize_info(){
 	}
 	int ciphertext_len;
 	unsigned char *n = new unsigned char[512];
+	//n = (unsigned char *)memset(n, 0, 512);
 	unsigned char iv[16];
 	if (!RAND_bytes((unsigned char *)iv, 16)) {
 		std::cout << "!rand";
@@ -79,6 +80,8 @@ void serialize_info(){
 	ciphertext_len = encrypt ((unsigned char *)str,tot_len, key, iv,&n[4]);
 	//std::cout << "encrypting" << std::endl;
 	memcpy(&n[ciphertext_len+4], iv, 16);
+	//BIO_dump_fp (stdout, (const char *)n, 512);
+	//BIO_dump_fp (stdout, (const char *)iv, 16);
 	len = ciphertext_len + 20;
 	//std::cout << len << std::endl;
 	//std::cout << len << std::endl;
@@ -87,20 +90,21 @@ void serialize_info(){
 	//std::cout << "done serializing" << std::endl;
 	//std::cout << "enc" << std::endl;
 	//BIO_dump_fp (stdout, (const char *)n, 512);
-	sendData(socketfd, n, 0, 512);
+	sendData(socketfd, n, 0, ciphertext_len + 20);
+	//BIO_dump_fp (stdout, (const char *)n, ciphertext_len + 20);
 	delete[] n;
 }
 
 void deserialize_info() {
 	unsigned char * node_char;
-	node_char = (unsigned char *)retrieveData(socketfd, 0);
+	uint32_t len, len_net;
+	len = retrieveData(socketfd, 0, (void **)&node_char);
+	//std::cout << node_char << std::endl;
+	//len = ntohl(len_net);
 	//std::cout << "enc" << std::endl;
-	//BIO_dump_fp (stdout, (const char *)node_char, 512);
+	//std::cout << "length " << len << " " << len_net << std::endl;
 	int i;
 	unsigned char iv[16];
-	uint32_t len;
-	memcpy( &len,node_char, 4);
-	len = ntohl(len);
 	//printf("len = %d\n", len);
 	//std::cout << len << std::endl;
 	//std::cout << "info retrieved" << std::endl;
@@ -109,7 +113,8 @@ void deserialize_info() {
 	//BIO_dump_fp (stdout, (const char *)iv, 16);
 	unsigned char decryptedtext[512];
 	int decryptedtext_len;
-	decryptedtext_len = decrypt((unsigned char *)&node_char[4], len-20, key, iv, decryptedtext);
+	//BIO_dump_fp (stdout, (const char *)node_char, len-16);
+	decryptedtext_len = decrypt((unsigned char *)node_char, len-16, key, iv, decryptedtext);
 	retr = new info;
 	memcpy(retr, decryptedtext, sizeof(info));
 	retr->root_sect = ntohl(retr->root_sect);
@@ -148,7 +153,7 @@ int height( node * root ) {
  * and turns all the integers into network mode so there is no problem for the endianess
  * all the fields are created at the beginning so there's no problem for the serialization
  */
-unsigned char * serialize(void * to_serialize, bool is_record) {
+unsigned char * serialize(void * to_serialize, bool is_record, int *len_end) {
 	int i;
 	int length, tot_len;
 	uint32_t len;
@@ -161,7 +166,7 @@ unsigned char * serialize(void * to_serialize, bool is_record) {
 		record_to_serialize->sector = htonl(record_to_serialize->sector);
 		record_to_serialize->parent = NULL;
 		length = sizeof(record) + (retr->num_fields * sizeof(fields_type)) + 10;
-		std::cout << length << std::endl;
+		//std::cout << length << std::endl;
 		tot_len = length + 10 + ((length) % 16);
 		str = new unsigned char[tot_len];
 		//for (i=1;)
@@ -200,6 +205,7 @@ unsigned char * serialize(void * to_serialize, bool is_record) {
 
 	int ciphertext_len;
 	unsigned char *n = new unsigned char[512];
+	n = (unsigned char *)memset(n, 0, 512);
 	unsigned char iv[16];
 	if (!RAND_bytes((unsigned char *)iv, 16)) {
 		std::cout << "!rand";
@@ -208,33 +214,28 @@ unsigned char * serialize(void * to_serialize, bool is_record) {
 
 	ciphertext_len = encrypt ((unsigned char *)str,tot_len, key, iv,&n[4]);
 	memcpy(&n[ciphertext_len+4], iv, 16);
+	std::cout << " serialize " << ciphertext_len + 20 << std::endl;
+	BIO_dump_fp (stdout, (const char *)n, 512);
+	*len_end = ciphertext_len + 20;
 	len = ciphertext_len + 20;
 	len = htonl(len);
 	memcpy(n, &len, 4);
 	delete[] str;
 	return n;
 }
-/*
-char * serialize_record(record * rec) {
-	
-
-}*/
 	
 /*this function is used just after the client receives the data from the server.
  * it restores all the data and put the pointers when they are there.
  */	
- void * deserialize(unsigned char * node_char, bool is_record) {
+ void * deserialize(unsigned char * node_char, bool is_record, uint32_t len) {
 	int i;
 	unsigned char iv[16];
-	uint32_t len;
-	memcpy( &len,node_char, 4);
-	len = ntohl(len);
 	//printf("len = %d\n", len);
 	//std::cout << len << std::endl;
 	memcpy( iv, &node_char[len-16], 16);
 	unsigned char decryptedtext[512];
 	int decryptedtext_len;
-	decryptedtext_len = decrypt((unsigned char *)&node_char[4], len-20, key, iv, decryptedtext);
+	decryptedtext_len = decrypt((unsigned char *)node_char, len-16, key, iv, decryptedtext);
 	//std::cout << is_record;
 	if(is_record) {
 		record * rec;
@@ -278,12 +279,6 @@ char * serialize_record(record * rec) {
 	}
 }
 
-
-//char * serialize_record(record * rec_to_serialize);
-//record * deserialize_record(char * rec_serialized);
-
-
-
 /* Utility function to give the length in edges
  * of the path from any node to the root.
  */
@@ -326,18 +321,18 @@ node * read_from_file(node * root, int num_fields) {
 		fields_array = new fields_type[num_fields];
 		for(i=0;i<num_fields;i++){
 			fscanf(fp, "%d", &fields_array[i]);
-			std::cout << fields_array[i];
+			//std::cout << fields_array[i];
 			if (i<num_fields - 1)
 				fscanf(fp," ");
 			else if(i == num_fields-1)
 				fscanf(fp,"\n");
 		}
-		std::cout << std::endl;
+		//std::cout << std::endl;
 		key_tmp = fields_array[key_pos - 1];
 		fields_array[key_pos - 1] = fields_array[0];
 		fields_array[0] = key_tmp;
 		root = insert(root, key_tmp, fields_array);
-		std::cout << "after inserting" <<std::endl;
+		//std::cout << "after inserting" <<std::endl;
 	}
 	fclose(fp);
 	return root;

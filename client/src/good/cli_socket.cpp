@@ -6,6 +6,11 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <openssl/conf.h>
+#include <openssl/evp.h>
+#include <openssl/err.h>
+#include <openssl/rand.h>
+
 #include <errno.h>
 #include <iostream>
 #include "header_cli.h"
@@ -76,39 +81,41 @@ int sendData(int sock, void * data, sect_type sect, int size){
 	return 0;
 }
 
-void * retrieveData(int sock, sect_type sector) {
+int retrieveData(int sock, sect_type sector, void ** ris) {
 	uint32_t l, l_comm, ack, sect;
 	int len, ack_int;
-	char * ris;
 	l = htonl(sizeof(uint32_t));
 	l_comm = htonl(2);
 	sect =  htonl(sector);
 	//here I send that I want to read
 	if (writen(sock, (char*)"re", 2)<=0) {
 		perror("command");
-		return NULL;
+		return 0;
 	}
 	//I have to send the number of the sector of the data to be retrieved
 	if (writen(sock, (char*)&sect, 4)<=0) {
 		perror("number of the sector");
-		return NULL;
+		return 0;
 	}
 	//here I receive the length of te record
-/*	if (readn(sock, (char*)&l, 4)<=0) {
+	if (readn(sock, (char*)&l, 4)<=0) {
 		perror("receiving length");
-		return NULL;
+		return 0;
 	}
-	len = ntohl(l);*/
+	len = ntohl(l);
 	//I suppose that all the records are 512 byte
-	//std::cout << "cli_sock" << std::endl;
-	ris = new char[SECTOR_SIZE];
+	std::cout << "cli_sock " << len << std::endl;
+	*ris = new char[len];
 	/* here I receive the answer */
 	
-	if (readn(sock, ris, SECTOR_SIZE)<=0) {
+	if (readn(sock, (char *)*ris, len)<=0) {
 		perror("record not retrieved");
-		free(ris);
-		return NULL;
+		free(*ris);
+		return 0;
 	}
+	std::cout << "retrieved all" << std::endl;
+	BIO_dump_fp (stdout, (const char *)ris, len);
+	std::cout << *ris << std::endl;
 /*	//this is the acknowledgment for the server
 	if (writen(sock, (char*)sect, 4)<=0) {
 		perror("ack client send");
@@ -122,7 +129,7 @@ void * retrieveData(int sock, sect_type sector) {
 	if (ntohl(ack) != sector){
 		return NULL;
 	}*/
-	return (void*) ris;
+	return len;
 }
 
 int serverConnectionFinish(int socketfd) {

@@ -77,12 +77,12 @@ void print_nodes_and_sectors() {
 
 void find_and_print(node * root, key_type key, bool verbose) {
 	record * r = find(root, key, verbose);
-	if (r == NULL)
-		printf("Record not found under key %d.\n", key);
-	else {
-		std::cout << "record";
-		print_record(r);
-	}
+	//if (r == NULL)
+		//printf("Record not found under key %d.\n", key);
+	//else {
+		//std::cout << "record";
+		//print_record(r);
+	//}
 }
 /*
 void print_tree (node * root) {
@@ -124,6 +124,7 @@ void print_node(node * ptr) {
 
 void print_record(record * ptr) {
 	int i;
+	std::cout << ptr << std::endl;
 	std::cout << " num fields " << retr->num_fields << std::endl;
 /*	while (ptr->next != NULL) {
 		std::cout << ptr->key << " : ";
@@ -139,6 +140,7 @@ void print_record(record * ptr) {
 	for(i = 0; i < retr->num_fields; i++) {
 		std::cout << ptr->fields[i] << " , ";
 	}
+	std::cout << std::endl << ptr->next_sect << std::endl;
 	std::cout << " sector " << ptr->sector;
 	std::cout << std::endl;
 }
@@ -210,7 +212,7 @@ void find_range(node * root, key_type key_start, key_type key_end, bool verbose,
 				//std::cout << " ! leaf " << std::endl;
 				//ptr = new (void *);
 				if(i==0 && ptr_main->keys[i] >= key_start){
-					//std::cout << "case 1" << std::endl;
+					std::cout << "case 1" << std::endl;
 					ptr = (node *)retrieveDataFake(socketfd, ptr_main->sectors[i], false, ptr_main, i);
 					//ptr_main->pointers[i] = ptr;
 					//ptr->parent = ptr_main;
@@ -218,7 +220,7 @@ void find_range(node * root, key_type key_start, key_type key_end, bool verbose,
 				}
 				//std::cout << "after first if " << std::endl;
 				if(i!=0 && ((ptr_main->keys[i] > key_start) || (ptr_main->keys[i-1] <= key_end))) {
-					//std::cout << "case 2 " << ptr_main->keys[i-1] << " " << ptr_main->keys[i] << " " << ptr_main->sectors[i] <<  std::endl;
+					std::cout << "case 2 " <<  std::endl;
 					ptr = (node *)retrieveDataFake(socketfd, ptr_main->sectors[i], false, ptr_main, i);
 					//ptr_main->pointers[i] = ptr;
 					//ptr->parent = ptr_main;
@@ -226,7 +228,7 @@ void find_range(node * root, key_type key_start, key_type key_end, bool verbose,
 				}
 				//std::cout << "after second if " << i << " " << ptr_main->num_keys <<" " << ptr_main->keys[i] << " " << ptr_main->sectors[i] << " " << key_start << " " << key_end << " ; " << std::endl; 
 				if (i==ptr_main->num_keys-1 && ptr_main->keys[i] < key_end) {
-					//std::cout << "case 3" << std::endl;
+					std::cout << "case 3" << std::endl;
 					ptr = (node *)retrieveDataFake(socketfd, ptr_main->sectors[i + 1], false, ptr_main, i+1);
 					//std::cout << "after case 3" <<std::endl;
 					//ptr_main->pointers[i+1] = ptr;
@@ -247,16 +249,12 @@ void find_range(node * root, key_type key_start, key_type key_end, bool verbose,
 					//ptr_to_rec->parent = ptr_main;
 					//std::cout << "pushing record" << std::endl;
 					(*returned_rec).push_back(ptr_to_rec);
-	/*				while(ptr_to_rec->next_sect != 0) {
+					while(ptr_to_rec->next_sect != 0) {
 						//here I have to manage the pointers
-						ptr_to_rec = (record *)retrieveDataFake(socketfd, ptr_to_rec->next_sect, true);
-						if (flag = 0){
-							flag = 1;
-							ptr_main->pointers[i] = ptr_to_rec;
-						}
-						ptr_to_rec->next = NULL;
-						ptr_to_rec->parent = ptr_main;
-						returned_rec.push_back(ptr_to_rec);
+						std::cout << "range " << std::endl;
+						std::cout << ptr_to_rec->next << " " << ptr_to_rec << " " << ptr_to_rec->next_sect << std::endl;
+						ptr_to_rec = ptr_to_rec->next;
+						(*returned_rec).push_back(ptr_to_rec);
 					}
 					//here I have to manage the pointers
 	/*				ptr_to_rec = (record *)retrieveDataFake(socketfd, ptr_main->sectors[i], true);
@@ -359,8 +357,9 @@ node * find_leaf( node * root, key_type key, bool verbose ) {
  //this function find a leaf with the specified key if it exists and returns the pointer to the record found, returns NULL otherwise
 record * find( node * root, key_type key, bool verbose ) {
 	int i = 0;
-	record * pp;
+	record * pp, *first;
 	std::cout << key << "\n";
+	uint32_t rec_next;
 	node * c = find_leaf( root, key, verbose );
 	std::cout << "found leaf\n";
 	if (c == NULL) return NULL;
@@ -373,12 +372,23 @@ record * find( node * root, key_type key, bool verbose ) {
 		return NULL;
 	else {
 		/* this points to the first record with that key */
-		std::cout << "asfdsadf" << c->sectors[i] << "\n";
+		//std::cout << "asfdsadf" << c->sectors[i] << "\n";
 		//here I have to manage the pointers
+		//rec_next = c->sectors[i];
 		pp = (record *)retrieveDataFake(socketfd, c->sectors[i], true, c, i);
+		print_record(pp);
+		first = pp;
+		std::cout << pp->next_sect << std::endl;
+		std::cout << pp->next << std::endl;
+		while(pp->next_sect > 0){
+			//std::cout << "ciao" << std::endl;
+			pp = pp->next;
+			print_record(pp);
+			//std::cout << pp->next_sect;
+		}
 		//pp->parent = c;
-		std::cout << pp << std::endl;
+		//std::cout << pp << std::endl;
 		//print_record(pp);
-		return pp;
+		return first;
 	}
 }

@@ -2,7 +2,7 @@ CC=g++
 DIRSRC=src/good/
 DIRBIN=bin/
 
-OBJECTS=$(DIRBIN)utils_tree.o $(DIRBIN)cli_socket.o $(DIRBIN)cli_server.o $(DIRBIN)creation.o $(DIRBIN)find_and_print.o $(DIRBIN)insertion.o $(DIRBIN)lic.o $(DIRBIN)aes.o $(DIRBIN)main.o -lssl -lcrypto
+OBJECTS=$(DIRBIN)utils_tree.o $(DIRBIN)cli_socket.o $(DIRBIN)cli_server.o $(DIRBIN)creation.o $(DIRBIN)find_and_print.o $(DIRBIN)insertion.o $(DIRBIN)lic.o $(DIRBIN)aes.o $(DIRBIN)main.o -lssl -lcrypto -lgmpxx -lgmp
 
 
 all: client
@@ -10,7 +10,7 @@ all: client
 client: $(OBJECTS)
 	$(CC) $(OBJECTS) -o $@
 
-$(DIRBIN)main.o: $(DIRSRC)main.cpp
+$(DIRBIN)main.o: $(DIRSRC)main.cpp -lgmpxx -lgmp
 	$(CC) -c $< -o $@
 
 $(DIRBIN)insertion.o: $(DIRSRC)insertion.cpp

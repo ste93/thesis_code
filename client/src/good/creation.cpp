@@ -14,6 +14,7 @@ record * make_record(key_type key, fields_type * fields) {
 		new_record->key = key;
 		new_record->parent = NULL;
 		new_record->next = NULL;
+		new_record->next_sect = 0;
 //	if (sect_not_used.empty()) {
 		retr->last_sect_used++;
 		new_record->sector = retr->last_sect_used;

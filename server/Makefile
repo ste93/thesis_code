@@ -8,7 +8,7 @@ OBJECTS=$(DIRBIN)serv.o
 all: server
 
 server: $(OBJECTS)
-	$(CC) $(OBJECTS) -o $@ -lpthread
+	$(CC) $(OBJECTS) -o $@ -lpthread -lssl -lcrypto
 
 $(DIRBIN)serv.o: $(DIRSRC)serv.cpp
 	$(CC) -c $< -o $@

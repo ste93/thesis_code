@@ -1,5 +1,2 @@
-make cliTCP a library
-make encrypt a library (found existent one)
-add server send to b+tree 
-add server receive and build to b+tree
-...
+
+

@@ -278,6 +278,10 @@ node * start_new_tree(key_type key, record * pointer) {
 	return root;
 }
 
+record * enqueue_record(node * root, record * rec, key_type key) {
+	
+
+}
 
 
 /* Master insertion function.
@@ -288,35 +292,35 @@ node * start_new_tree(key_type key, record * pointer) {
  */ 
 node * insert( node * root, key_type key, fields_type * fields ) {
 
-	record * pointer, *pp, *orig;
+	record * pointer, *pp, *old;
 	node * leaf;
 	int i;
 	std::cout << "inserting : " << key << " ; ";
-	for (i = 0; i < retr->num_fields; i++)
-		std::cout << fields[i] << " ";
-	std::cout << "\n";
+	//for (i = 0; i < retr->num_fields; i++)
+		//std::cout << fields[i] << " ";
+	//std::cout << "\n";
 	std::cout << root;
 	if (root != NULL) {
+		old = find(root, key, false);
+		std::cout << old;
 	//this one is for the duplicates
-		if ((pp = find(root, key, false)) != NULL){
-			std::cout << "found " << key;
-/*			orig = pp;
-			while (pp->next_sect != 0){//here in the queue the different values for a single key are not in order, can be updated
-				//here I have to manage the pointers
-				pp->next = (record *)retrieveDataFake(socketfd, pp->next_sect, true);
-				pp->next->parent = leaf;
-	//			if (pp->key == value)
-	//				return NULL;
-				pp = pp->next;
-			}
+		if (old != NULL){
+			std::cout << "after if" << std::endl;
+
+			leaf = find_leaf(root, key, false);
+			i = 0;
+			while(leaf->keys[i] != key)
+				i++;
 	//		if (pp->key == value)
 	//			return NULL;
-			pp->next = make_record(key, fields);
+			pp = make_record(key, fields);
 			//pp->next->prev = pp;
-			pp->next->parent = pp->parent;
-			pp->next_sect = pp->next->sector;
-			pp->next->next_sect = 0;
-			*/
+			pp->parent = leaf;
+			pp->next_sect = old->sector;
+			std::cout << "old " << old << std::endl;
+			pp->next = old;
+			leaf->pointers[i] = pp;
+			leaf->sectors[i] = pp->sector;
 			return root;
 		}
 	}

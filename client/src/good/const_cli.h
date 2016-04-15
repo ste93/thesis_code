@@ -130,7 +130,7 @@ typedef struct node {
  * the record is composed by a key (that is not primary so it can have multiple data associated)
  * all the values of the record, the parent node (that can also be a record node because of multiple keys)
  * the sector of the child (zero if there is no child) and a pointer to it that is equal to NULL 
- * if the  shild exists and is not in the cache or the cild doesn't exists, otherwise point to the child.
+ * if the  shild exists and is not in the cache or the child doesn't exists, otherwise point to the child.
  * the parent pointer is used only when the tree is in cache for simplify the insertion, because the parent node is surely already in the cache.
  * the sector is the sector used for that node.
 */

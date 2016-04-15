@@ -15,6 +15,10 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <openssl/conf.h>
+#include <openssl/evp.h>
+#include <openssl/err.h>
+#include <openssl/rand.h>
 #include <string.h>
 #include <sys/types.h>
 //#include "read.cpp"
@@ -28,9 +32,6 @@
 #include <dirent.h>
 #include <errno.h>
 #include <pthread.h> 
-#define DEVICE "/dev/loop1"
-#define SOCKET_ERROR   ((int)-1)
-#define SIZEBUF 1000000
 
 pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
 typedef uint32_t sect_type;
@@ -46,7 +47,7 @@ int write_sect(void * cont, int sect_num,int size) {
         cout<<"Error In Opening the HardDisk File Retuning Error..."<<endl;
         return -1;
     }
-	cout << (char*)cont;
+	//cout << (char*)cont;
     //Read One Block of Data to Buffer
 	std::cout << "writing sector" << sect_num << std::endl;
     if(lseek(f, sect_num*SECTOR_SIZE, SEEK_SET) != sect_num*SECTOR_SIZE)
@@ -60,7 +61,7 @@ int write_sect(void * cont, int sect_num,int size) {
 		return -1;
 	}
     close(f);
-	std::cout << "sector_written" << std::endl;
+	//std::cout << "sector_written" << std::endl;
     /* Do something with the data */
     /*cout<<"Length : "<<length<<endl;
 	cout << block;*/
@@ -70,36 +71,46 @@ int write_sect(void * cont, int sect_num,int size) {
 
 
 
-void * read_sect(int sect_num) {
+int read_sect(int sect_num, void ** block) {
 
-    void *block = malloc(SECTOR_SIZE);
     //cout<<"Implementation of the File Handler Read Method..."<<endl;
 	int l;
+	uint32_t size, size_net;
     int f = open(DEVICE, O_RDWR);
     if(f < 0)
     {
+		
         cout<<"Error In Opening the HardDisk File Retuning Error..."<<endl;
-        return NULL;
+        return 0;
     }
 	
     //Read One Block of Data to Buffer
+        std::cout << "sector" << sect_num << std::endl;
     if(lseek(f, sect_num*SECTOR_SIZE, SEEK_SET) != sect_num*SECTOR_SIZE)
     {
           perror("Couldn't seek");
           close(f);
-          return NULL;
+          return 0;
     }
-	std::cout << "reading sector " << sect_num <<std::endl;
-    if ((l = read(f, block, SECTOR_SIZE)) <= 0) {
+	//std::cout << "reading sector " << sect_num <<std::endl;
+	    if ((l = read(f, (void *)&size_net, 4)) != 4) {
 		cout << "error";
-		return NULL;
+		return 0;
+	}
+	size = ntohl(size_net);
+	std::cout << "size of sect " << size-4 << std::endl;
+    *block = new char[size];
+    if ((l = read(f, *block, size-4)) != (size-4)) {
+		cout << "error";
+		return 0;
 	}
     close(f);
+  	BIO_dump_fp (stdout, (const char *)*block, size-4);
     /* Do something with the data */
     /*cout<<"Length : "<<length<<endl;
 	cout << block;*/
 
-    return block;
+    return size-4;
 }
 
 
@@ -154,43 +165,53 @@ void *thread_cli(void *sock) {
 			}
 			sect = ntohl(sect_net);	
 			pthread_mutex_lock(&mut);
-			if ((ris = read_sect(sect)) == NULL) {	
+			if ((len = read_sect(sect, &ris)) <= 0) {	
 				pthread_mutex_unlock(&mut);
 				pthread_exit(NULL);
 			}
-			pthread_mutex_unlock(&mut);
-			if (writen(socket, (char*)ris, SECTOR_SIZE)<=0) {
+		  	BIO_dump_fp (stdout, (const char *)ris, len);
+			std::cout << "length " << len << std::endl;
+			len_net = htonl(len);
+			if (writen(socket, (char*)&len_net, 4)<=0) {
+				perror("length");
+				return NULL;
+			}
+		  	BIO_dump_fp (stdout, (const char *)ris, len);
+			if (writen(socket, (char*)ris, (len))<=0) {
+				perror("writing");
 				pthread_exit(NULL);
 			}
 			free(ris);
+			pthread_mutex_unlock(&mut);
+			std::cout << "sent all" << std::endl;
 		}
 		else if (strcmp(op, "wr") == 0){
-			std::cout << "reading from socket" << std::endl;
+			//std::cout << "reading from socket" << std::endl;
 			if(readn(socket, (char *) &sect_net, 4)<=0){
 				pthread_exit(NULL);
 			}
-			std::cout << sect_net << " sector " <<sect << std::endl;
+			//std::cout << sect_net << " sector " <<sect << std::endl;
 			sect = ntohl(sect_net);
 			if(readn(socket, (char *) &size_net, 4)<=0){
 				pthread_exit(NULL);
 			}
 			size = ntohl(size_net);
-			cout << size << "\n";
+			//cout << size << "\n";
 			ris = malloc(size);
 			if (readn(socket, (char*)ris, size)<=0) {
 				pthread_exit(NULL);
 			}
 			pthread_mutex_lock(&mut);
-			std::cout << "writing " << ris << " " << sect << " " << size << std::endl;
+			//std::cout << "writing " << ris << " " << sect << " " << size << std::endl;
 			
 			if(write_sect(ris, sect, size) < 0) {
 				pthread_mutex_unlock(&mut);
 				pthread_exit(NULL);
 			}
 			pthread_mutex_unlock(&mut);
-			printf("sector_written\n");
+			//printf("sector_written\n");
 			if ((wr_succ = writen(socket, (char*)&sect_net, 4))<=0) {
-				printf("wr_%d\n", wr_succ);
+				//printf("wr_%d\n", wr_succ);
 				pthread_exit(NULL);
 			}
 		}

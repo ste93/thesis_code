@@ -1,5 +1,0 @@
-#include "crypto/rijndael.h"
-
-int main() {
-	return 0;
-}
