@@ -69,29 +69,17 @@ void serialize_info(){
 	}
 	int ciphertext_len;
 	unsigned char *n = new unsigned char[512];
-	//n = (unsigned char *)memset(n, 0, 512);
 	unsigned char iv[16];
 	if (!RAND_bytes((unsigned char *)iv, 16)) {
 		std::cout << "!rand";
 		return NULL; 
 	}
-	//std::cout << "iv" << std::endl;
-	//BIO_dump_fp (stdout, (const char *)iv, 16);
 	ciphertext_len = encrypt ((unsigned char *)str,tot_len, key, iv,&n[4]);
-	//std::cout << "encrypting" << std::endl;
 	memcpy(&n[ciphertext_len+4], iv, 16);
-	//BIO_dump_fp (stdout, (const char *)n, 512);
-	//BIO_dump_fp (stdout, (const char *)iv, 16);
 	len = ciphertext_len + 20;
-	//std::cout << len << std::endl;
-	//std::cout << len << std::endl;
 	len = htonl(len);
 	memcpy(n, &len, 4);
-	//std::cout << "done serializing" << std::endl;
-	//std::cout << "enc" << std::endl;
-	//BIO_dump_fp (stdout, (const char *)n, 512);
 	sendData(socketfd, n, 0, ciphertext_len + 20);
-	//BIO_dump_fp (stdout, (const char *)n, ciphertext_len + 20);
 	delete[] n;
 }
 
@@ -99,21 +87,11 @@ void deserialize_info() {
 	unsigned char * node_char;
 	uint32_t len, len_net;
 	len = retrieveData(socketfd, 0, (void **)&node_char);
-	//std::cout << node_char << std::endl;
-	//len = ntohl(len_net);
-	//std::cout << "enc" << std::endl;
-	//std::cout << "length " << len << " " << len_net << std::endl;
 	int i;
 	unsigned char iv[16];
-	//printf("len = %d\n", len);
-	//std::cout << len << std::endl;
-	//std::cout << "info retrieved" << std::endl;
 	memcpy( iv, &node_char[len-16], 16);
-	//std::cout << "iv" << std::endl;
-	//BIO_dump_fp (stdout, (const char *)iv, 16);
 	unsigned char decryptedtext[512];
 	int decryptedtext_len;
-	//BIO_dump_fp (stdout, (const char *)node_char, len-16);
 	decryptedtext_len = decrypt((unsigned char *)node_char, len-16, key, iv, decryptedtext);
 	retr = new info;
 	memcpy(retr, decryptedtext, sizeof(info));
@@ -166,10 +144,8 @@ unsigned char * serialize(void * to_serialize, bool is_record, int *len_end) {
 		record_to_serialize->sector = htonl(record_to_serialize->sector);
 		record_to_serialize->parent = NULL;
 		length = sizeof(record) + (retr->num_fields * sizeof(fields_type)) + 10;
-		//std::cout << length << std::endl;
 		tot_len = length + 10 + ((length) % 16);
 		str = new unsigned char[tot_len];
-		//for (i=1;)
 		memcpy(str, record_to_serialize, sizeof(record));
 		memcpy(&str[sizeof(record)], record_to_serialize->fields, retr->num_fields * sizeof(fields_type));
 		delete record_to_serialize->fields;
@@ -182,9 +158,6 @@ unsigned char * serialize(void * to_serialize, bool is_record, int *len_end) {
 		node * node_to_serialize;
 		node_to_serialize = (node *) to_serialize;
 		length = sizeof(node);
-		/*end = node_to_serialize->num_keys;
-		if (node_to_serialize->is_leaf) 
-			end++;*/
 		for (i=0;i<DEFAULT_ORDER;i++){
 			node_to_serialize->pointers[i] = NULL;
 			node_to_serialize->sectors[i] = htonl(node_to_serialize->sectors[i]);
@@ -214,8 +187,6 @@ unsigned char * serialize(void * to_serialize, bool is_record, int *len_end) {
 
 	ciphertext_len = encrypt ((unsigned char *)str,tot_len, key, iv,&n[4]);
 	memcpy(&n[ciphertext_len+4], iv, 16);
-	std::cout << " serialize " << ciphertext_len + 20 << std::endl;
-	BIO_dump_fp (stdout, (const char *)n, 512);
 	*len_end = ciphertext_len + 20;
 	len = ciphertext_len + 20;
 	len = htonl(len);
@@ -230,30 +201,20 @@ unsigned char * serialize(void * to_serialize, bool is_record, int *len_end) {
  void * deserialize(unsigned char * node_char, bool is_record, uint32_t len) {
 	int i;
 	unsigned char iv[16];
-	//printf("len = %d\n", len);
-	//std::cout << len << std::endl;
 	memcpy( iv, &node_char[len-16], 16);
 	unsigned char decryptedtext[512];
 	int decryptedtext_len;
 	decryptedtext_len = decrypt((unsigned char *)node_char, len-16, key, iv, decryptedtext);
-	//std::cout << is_record;
 	if(is_record) {
 		record * rec;
 		rec = new record;
 		memcpy((void *) rec, decryptedtext, sizeof(record));
-		//std::cout << "is_record" <<std::endl;
 		rec->key = ntohl(rec->key);
-		//std::cout << "key " << rec->key << std::endl;
 		rec->sector = ntohl(rec->sector);
-		//std::cout << "sector " <<  rec->sector << std::endl;
 		rec->parent = NULL;
 		fields_type * n = new fields_type[retr->num_fields];
 		memcpy(n, &decryptedtext[sizeof(record)], sizeof(fields_type[retr->num_fields]));
-		//std::cout << "fields created" << std::endl; 
 		rec->fields = n;
-		/*for(i=0;i<retr->num_fields;i++)
-			std::cout << n[i]<<std::endl;*/
-		//std::cout << "done deserializing";
 		delete[] node_char;
 		return rec;
 	}
@@ -266,10 +227,6 @@ unsigned char * serialize(void * to_serialize, bool is_record, int *len_end) {
 			node_serialized->sectors[i] = ntohl(node_serialized->sectors[i]);
 			node_serialized->pointers[i] = NULL;//this will be managed later when decided fake searches, but I think is not needed for now.
 		}
-/*		if(!node_serialized->is_leaf) {
-			node_serialized->sectors[i] = ntohl(node_serialized->sectors[i]);
-			node_serialized->pointers[i] = NULL;//this will be managed later when decided fake searches, but I think is not needed for now.
-		}*/
 		node_serialized->parent = NULL; //this will be managed later
 		node_serialized->num_keys = ntohl(node_serialized->num_keys);
 		node_serialized->next = NULL; // Used for queue so must be left NULL
@@ -321,18 +278,15 @@ node * read_from_file(node * root, int num_fields) {
 		fields_array = new fields_type[num_fields];
 		for(i=0;i<num_fields;i++){
 			fscanf(fp, "%d", &fields_array[i]);
-			//std::cout << fields_array[i];
 			if (i<num_fields - 1)
 				fscanf(fp," ");
 			else if(i == num_fields-1)
 				fscanf(fp,"\n");
 		}
-		//std::cout << std::endl;
 		key_tmp = fields_array[key_pos - 1];
 		fields_array[key_pos - 1] = fields_array[0];
 		fields_array[0] = key_tmp;
 		root = insert(root, key_tmp, fields_array);
-		//std::cout << "after inserting" <<std::endl;
 	}
 	fclose(fp);
 	return root;

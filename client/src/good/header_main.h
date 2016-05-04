@@ -2,9 +2,6 @@
 #define HEADERS_CLIENT
 #include "const_cli.h"
 std::map<sect_type, void*> nodes_in_memory;
-//std::map<sect_type, void*> nodes_used;
-//std::map<sect_type, sect_type> old_new_mapping;
-//std::list<sect_type> sect_not_used;
 std::set<sect_type> used_set;
 // GLOBALS.
 

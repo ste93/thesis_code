@@ -10,7 +10,6 @@
 #include <openssl/evp.h>
 #include <openssl/err.h>
 #include <openssl/rand.h>
-
 #include <errno.h>
 #include <iostream>
 #include "header_cli.h"
@@ -53,13 +52,11 @@ int sendData(int sock, void * data, sect_type sect, int size){
 		return -1;
 	}
 	s = htonl(sect);
-	//std::cout << s << " sector " << sect << std::endl;
 	if (writen(sock, (char*)&s, 4)<=0) {
 		perror("number of the sector");
 		return -1;
 	}
 	size_net = htonl(size);
-	//std::cout << size_net << " " << size << std::endl;
 	if (writen(sock, (char*)&size_net, 4)<=0) {
 		perror("number of the sector");
 		return -1;
@@ -77,7 +74,6 @@ int sendData(int sock, void * data, sect_type sect, int size){
 		perror ("write failed");
 		return -1;
 	}
-	//std::cout << "ack ok\n";
 	return 0;
 }
 
@@ -103,8 +99,6 @@ int retrieveData(int sock, sect_type sector, void ** ris) {
 		return 0;
 	}
 	len = ntohl(l);
-	//I suppose that all the records are 512 byte
-	std::cout << "cli_sock " << len << std::endl;
 	*ris = new char[len];
 	/* here I receive the answer */
 	
@@ -113,22 +107,6 @@ int retrieveData(int sock, sect_type sector, void ** ris) {
 		free(*ris);
 		return 0;
 	}
-	std::cout << "retrieved all" << std::endl;
-	BIO_dump_fp (stdout, (const char *)ris, len);
-	std::cout << *ris << std::endl;
-/*	//this is the acknowledgment for the server
-	if (writen(sock, (char*)sect, 4)<=0) {
-		perror("ack client send");
-		return NULL;
-	}
-	//this is the acknowledgment of the server
-	if (readn(sock, (char*)&ack, 4)<=0) {
-		perror("receiving length");
-		return NULL;
-	}
-	if (ntohl(ack) != sector){
-		return NULL;
-	}*/
 	return len;
 }
 
@@ -184,7 +162,6 @@ int serverConnectionInit(char *ip_addr,char *port, int *socket_main) {
 	Serv.sin_port		 =	htons(remote_port_number);
 
 	/* connection request */
-	//std::cout << ip_addr << " " << port << "\n";
 	ris = connect(socketfd, (struct sockaddr*) &Serv, sizeof(Serv));
 	if (ris == SOCKET_ERROR)  {
 		printf ("connect() failed, Err: %d \"%s\"\n",errno,strerror(errno));
@@ -194,18 +171,3 @@ int serverConnectionInit(char *ip_addr,char *port, int *socket_main) {
 	*socket_main = socketfd;
 	return 0;
 }
-/*
-int main(int argc, char * argv[]) {
-	int sock, l, ri;
-	char * read_res;
-	char sent[512] = "llslsllslllslllslllsllslslls";
-	serverConnectionInit("127.0.0.1", "3333", &sock);
-	ri = sendData(sock, sent, 44);
-	printf("%d\n",ri );
-	read_res = (char *)retrieveData(sock, 44);
-	printf("%s\n", read_res);
-	l = serverConnectionFinish(sock);
-	std::cout << l << "\n";
-	return 0;
-}
-*/

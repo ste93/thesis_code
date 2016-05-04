@@ -14,11 +14,29 @@
 #include "cli_server.h"
 #include "aes.h"
 #include "cli_socket.h"
-//#include "../../bigint/Library.hh"
+
+int timeval_subtract(struct timeval *result, struct timeval *t2, struct timeval *t1)
+{
+    long int diff = (t2->tv_usec + 1000000 * t2->tv_sec) - (t1->tv_usec + 1000000 * t1->tv_sec);
+    result->tv_sec = diff / 1000000;
+    result->tv_usec = diff % 1000000;
+
+    return (diff<0);
+}
+
+void timeval_print(struct timeval *tv)
+{
+    char buffer[30];
+    time_t curtime;
+
+    printf("%ld.%06ld", tv->tv_sec, tv->tv_usec);
+    curtime = tv->tv_sec;
+    strftime(buffer, 30, "%m-%d-%Y  %T", localtime(&curtime));
+    printf(" = %s.%06ld\n", buffer, tv->tv_usec);
+}
 
 using namespace std;
 int main( int argc, char ** argv ) {
-	//main variable declaration
 	fields_type  * fields_array;
 	clock_t startTime;
 	FILE *fp;
@@ -88,6 +106,7 @@ int main( int argc, char ** argv ) {
 	while (scanf("%c", &instruction) != EOF) {
 		switch (instruction) {
 		case 'q':
+			if(root!=NULL)
 			{
 				time_t startTime;
 				mpz_set_ui(totalTime, 0);
@@ -97,14 +116,20 @@ int main( int argc, char ** argv ) {
 				mpz_init(time);
 				mpz_t clk;
 				mpz_init(clk);
+				localtime(&startTime);
+				mpz_set_ui(time, startTime);				
 				std::cout << "asdfad" << std::endl;
+				gmp_printf("the time is %Zd", time);
 				mpz_set_ui(clk, clock());
+				std::cout << clock() << std::endl;
+				gmp_printf("this is %Zd", clk);
 				mpz_sub_ui(time, clk, startTime);
-				gmp_printf("the time is %Z", time);
+				gmp_printf("the time is %Zd", time);
 				std::cout << std::endl;
-				mpz_set_ui(clk, CLOCKS_PER_SEC);
-				mpz_div(time, time,clk);
-				std::cout << time << std::endl;
+				//mpz_set_ui(clk, CLOCKS_PER_SEC);
+				std::cout << CLOCKS_PER_SEC << std::endl;
+				mpz_cdiv_q_ui(time, time, CLOCKS_PER_SEC);
+				gmp_printf("the time is %Zd", time);
 				root = NULL;
 			}
 			break;
@@ -132,7 +157,6 @@ int main( int argc, char ** argv ) {
 				std::map<sect_type, void*>::const_iterator it = nodes_in_memory.find(se);
 				if (it!=nodes_in_memory.end()) 
 					no = (node *)nodes_in_memory[se];
-				//(node *)retrieveDataFake(socketfd, se, false);
 				std::cout << no->num_keys << " keys ";
 				for(i=0;i<no->num_keys;i++) {
 					std::cout << i << " " << no->keys[i] << " ";
@@ -161,7 +185,6 @@ int main( int argc, char ** argv ) {
 			key_type temp_key;
 			if (root == NULL) 
 				root = (node *)retrieveRoot();
-			//root_ptr = root;
 			fields_array = new fields_type[num_fields];
 			for (i=0;i<num_fields;i++) {
 				std::cin >> fields_array[i];
@@ -169,7 +192,6 @@ int main( int argc, char ** argv ) {
 			}
 			temp_key = fields_array[0];
 			root = insert(root, temp_key, fields_array);
-			//root_ptr = root;
 			for(i=0;i<=root->num_keys;i++)
 				std::cout << root->keys[i];
 			break;
@@ -177,7 +199,6 @@ int main( int argc, char ** argv ) {
 			key_type key_tmp;
 			if (root == NULL) 
 				root = (node *)retrieveRoot();
-			//root_ptr = root;
 			std::cin >> key_tmp;
 			find_and_print(root, key_tmp, false);
 			std::cout << "end " << std::endl;
@@ -186,12 +207,9 @@ int main( int argc, char ** argv ) {
 			int32_t key1, key2;
 			if (root == NULL) 
 				root = (node *)retrieveRoot();
-			//root_ptr = root;
 			std::cout << "inserisci la chiave!!" << std::endl;
 			std::cin >> key1;
-			//std::cout << "ciao"<< std::endl;
 			std::cin >> key2;
-			//std::cout << "range "<< std::endl;
 			find_and_print_range(root, key1, key2, false);
 			break;
 		case 'c':
@@ -201,61 +219,56 @@ int main( int argc, char ** argv ) {
 		case 'a':
 			if (root == NULL) 
 				root = (node *)retrieveRoot();
-			//root_ptr = root;
 			root = read_from_file(root, num_fields);
 			break;
-		case 'f':
-			std::string queryFileName;
-			std::string query;
+/*		case 'f':
+			std::string fileQuery;
+			std::string queryLine;
 			cout << "Enter a filename for a file that contains queries (type exit to end): ";
-			cin >> queryFileName;
+			cin >> fileQuery;
 
-			queryFile.open(queryFileName.c_str());
-			getline(queryFile, query);
+			queryFile.open(fileQuery.c_str());
+			getline(queryFile, queryLine);
 
-			cout << query << endl; //heading
-/*
-			totalTime = 0;
-			dataSent = 0;
-			numberOfQueries = 0;
-			dimension = 1;
-*/
+			cout << queryLine << endl; //heading
 			if (root == NULL) 
 				root = (node *)retrieveRoot();
 
 			cout << "Starting to process queries" << endl;
-			while (getline(queryFile, query))
+			time_t startTime;
+			mpz_set_ui(totalTime, 0);
+			startTime= clock();
+			send_tree(root);
+			mpz_t time;
+			mpz_init(time);
+			mpz_t clk;
+			mpz_init(clk);
+			mpz_set_ui(clk, clock());
+			gmp_printf("this is %Zd", clk);
+			while (getline(queryFile, queryLine))
 			{
-				if (query.length() > 1) //last line check
+				if (queryLine.length() > 1) //last line check
 				{
 					numberOfQueries++;
-					//startTime = clock();
-					//dataSent = client.processQuery(query, dimension);
-					std::stringstream stream(query);
-					//while(1) {
+					std::stringstream stream(queryLine);
 					int n, k;
 					stream >> n;
 					stream >> k;
-					//if (!stream)
-					//	break;
 					std::cout << "Found integer: " << n << k << std::endl;
 					find_and_print_range(root, n, k, false);
 
 
 					//}
 					std::cout << std::endl;
-/*					mpz_t time;
+					mpz_t time;
 					time = (mpz_t)( clock() - startTime ) / (mpz_t)CLOCKS_PER_SEC;
 					//cout << "Query #" << numberOfQueries << " is done in " << time << " s." << endl;
 					//timeOfQueries.push_back(time);
-					totalTime += time;*/
+					totalTime += time;
 				}
 				
-			}/*
-			cout << "time to process all queries: " << totalTime << " seconds" << endl;
-            //cout << "average time to process a query: " << totalTime/(mpz_t)numberOfQueries << " seconds." << endl;
-            cout << "average data sent (and received): " << dataSent / (mpz_t)numberOfQueries << " bytes." << endl;*/
-			break;
+			}
+			break;*/
 		default:
 			usage_2();
 			break;

@@ -140,7 +140,7 @@ void print_record(record * ptr) {
 	for(i = 0; i < retr->num_fields; i++) {
 		std::cout << ptr->fields[i] << " , ";
 	}
-	std::cout << std::endl << ptr->next_sect << std::endl;
+	std::cout << std::endl << ptr->next_sect << " " << ptr->next << std::endl;
 	std::cout << " sector " << ptr->sector;
 	std::cout << std::endl;
 }
